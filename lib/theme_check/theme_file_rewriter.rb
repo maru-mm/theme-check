@@ -25,6 +25,12 @@ module ThemeCheck
       )
     end
 
+    def remove(node)
+      @rewriter.remove(
+        range(node.tag_start_index, node.tag_end_index)
+      )
+    end
+
     def replace(node, content)
       @rewriter.replace(
         range(node.start_index, node.end_index),

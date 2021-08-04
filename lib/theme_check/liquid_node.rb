@@ -74,6 +74,16 @@ module ThemeCheck
       position.end_index
     end
 
+    def start_token_index
+      return position.start_index - 13 if inside_liquid_tag?
+      position.start_index - 3
+    end
+
+    def end_token_index
+      return position.end_index + 3 if inside_liquid_tag?
+      position.end_index + 2
+    end
+
     # Literals are hard-coded values in the liquid file.
     def literal?
       @value.is_a?(String) || @value.is_a?(Integer)

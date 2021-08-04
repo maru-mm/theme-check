@@ -45,7 +45,7 @@ class UnusedAssignTest < Minitest::Test
     offenses = analyze_theme(
       ThemeCheck::UnusedAssign.new,
       "templates/index.liquid" => <<~END,
-        {% assign a = 1 %}
+        {%              assign a = 1 %}
         {% include 'using' %}
       END
       "snippets/using.liquid" => <<~END,
@@ -73,5 +73,60 @@ class UnusedAssignTest < Minitest::Test
       END
     )
     assert_offenses("", offenses)
+  end
+
+  def test_removes_unused_assign
+    expected_sources = {
+      "templates/index.liquid" => "\n",
+    }
+    sources = fix_theme(
+      ThemeCheck::UnusedAssign.new,
+      "templates/index.liquid" => <<~END,
+        {% assign x = 1 %}
+      END
+    )
+    sources.each do |path, source|
+      assert_equal(expected_sources[path], source)
+    end
+  end
+
+  def test_removes_unused_assigns
+    expected_sources = {
+      "templates/index.liquid" => <<~END,
+
+
+      END
+    }
+
+    sources = fix_theme(
+      ThemeCheck::UnusedAssign.new,
+      "templates/index.liquid" => <<~END,
+        {%- liquid
+          assign body_font_italic = settings.type_body_font | font_modify: 'style', 'italic'
+          assign body_font_bold_italic = body_font_bold | font_modify: 'style', 'italic'
+        %}
+      END
+    )
+
+    sources.each do |path, source|
+      assert_equal(expected_sources[path], source)
+    end
+  end
+
+  def test_removes_assign_leaves_html
+    expected_sources = {
+      "templates/index.liquid" => <<~END,
+        <p>test case</p>
+      END
+    }
+    sources = fix_theme(
+      ThemeCheck::UnusedAssign.new,
+      "templates/index.liquid" => <<~END,
+        <p>test case</p>{% assign x = 1 %}
+      END
+    )
+    sources.each do |path, source|
+      assert_equal(expected_sources[path], source)
+    end
   end
 end
