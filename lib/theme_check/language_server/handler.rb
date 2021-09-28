@@ -18,6 +18,10 @@ module ThemeCheck
           context: true,
         },
         documentLinkProvider: true,
+        executeCommandProvider: {
+          workDoneProgress: false,
+          commands: ExecuteCommandProvider.all.map(&:command),
+        },
         textDocumentSync: {
           openClose: true,
           change: TextDocumentSyncKind::FULL,
@@ -42,6 +46,7 @@ module ThemeCheck
         @completion_engine = CompletionEngine.new(@storage)
         @document_link_engine = DocumentLinkEngine.new(@storage)
         @diagnostics_engine = DiagnosticsEngine.new(@bridge, @diagnostics_tracker)
+        @execute_command_engine = ExecuteCommandEngine.new
         @bridge.send_response(id, {
           capabilities: CAPABILITIES,
           serverInfo: SERVER_INFO,
@@ -86,6 +91,13 @@ module ThemeCheck
         line = params.dig('position', 'line')
         col = params.dig('position', 'character')
         @bridge.send_response(id, @completion_engine.completions(relative_path, line, col))
+      end
+
+      def on_workspace_execute_command(id, params)
+        @bridge.send_response(id, @execute_command_engine.execute(
+          params['command'],
+          params['arguments'],
+        ))
       end
 
       private
