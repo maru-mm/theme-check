@@ -43,6 +43,7 @@ class TranslationKeyExistsTest < Minitest::Test
     offenses = analyze_theme(
       ThemeCheck::TranslationKeyExists.new,
       "sections/product.liquid" => <<~END,
+        {{"submit" | t}}
         {% schema %}
           {
             "locales": {
@@ -52,20 +53,6 @@ class TranslationKeyExistsTest < Minitest::Test
             }
           }
         {% endschema %}
-        {{"submit" | t}}
-      END
-    )
-    assert_offenses("", offenses)
-  end
-
-  def test_ignores_key_in_schema
-    offenses = analyze_theme(
-      ThemeCheck::TranslationKeyExists.new,
-      "locales/en.default.json" => JSON.dump({
-        submit: "Subscribe",
-      }),
-      "sections/product.liquid" => <<~END,
-        {{"submit" | t}}
       END
     )
     assert_offenses("", offenses)

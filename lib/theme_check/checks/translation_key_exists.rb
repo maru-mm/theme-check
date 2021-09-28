@@ -6,42 +6,30 @@ module ThemeCheck
     doc docs_url(__FILE__)
 
     def initialize
-      @schema_locales = nil
-    end
-
-    def on_schema(node)
-      @schema_locales = JSON.parse(node.value.nodelist.join).dig("locales", @theme.default_locale)
+      @schema_locales = {}
+      @nodes = []
     end
 
     def on_variable(node)
       return unless @theme.default_locale_json&.content&.is_a?(Hash)
       return unless node.value.filters.any? { |name, _| name == "t" || name == "translate" }
-      return unless (key_node = node.children.first)
-      return unless key_node.value.is_a?(String)
 
-      if @schema_locales
-        add_as_offense(
-          key_exists?(key_node.value, @theme.default_locale_json.content) || key_exists?(key_node.value, @schema_locales) || ShopifyLiquid::SystemTranslations.include?(key_node.value),
-          "'#{key_node.value}' does not have a matching entry in '#{@theme.default_locale_json.relative_path}' or '#{node.theme_file.relative_path}",
-          node,
-          key_node
-        )
-      else
-        add_as_offense(
-          key_exists?(key_node.value, @theme.default_locale_json.content) || ShopifyLiquid::SystemTranslations.include?(key_node.value),
-          "'#{key_node.value}' does not have a matching entry in '#{@theme.default_locale_json.relative_path}'",
-          node,
-          key_node
-        )
-      end
+      @nodes << node
     end
 
-    def add_as_offense(boolean, message, node, key_node)
-      unless boolean
+    def on_schema(node)
+      @schema_locales = JSON.parse(node.value.nodelist.join).dig("locales", @theme.default_locale) if JSON.parse(node.value.nodelist.join).dig("locales", @theme.default_locale)
+    end
+
+    def on_end
+      @nodes.each do |node|
+        next unless (key_node = node.children.first)
+        next unless key_node.value.is_a?(String)
+        next if key_exists?(key_node.value, @theme.default_locale_json.content) || key_exists?(key_node.value, @schema_locales) || ShopifyLiquid::SystemTranslations.include?(key_node.value)
         add_offense(
-          message,
+          @schema_locales.empty? ? "'#{key_node.value}' does not have a matching entry in '#{@theme.default_locale_json.relative_path}'" : "'#{key_node.value}' does not have a matching entry in '#{@theme.default_locale_json.relative_path}' or '#{node.theme_file.relative_path}'",
           node: node,
-          markup: key_node.value,
+          markup: key_node.value
         ) do |corrector|
           corrector.add_default_translation_key(@theme.default_locale_json, key_node.value.split("."), "TODO")
         end
